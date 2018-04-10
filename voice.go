@@ -20,6 +20,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/nacl/secretbox"
+	"github.com/sirupsen/logrus"
 )
 
 // ------------------------------------------------------------------------------------------------
@@ -78,7 +79,7 @@ type VoiceSpeakingUpdateHandler func(vc *VoiceConnection, vs *VoiceSpeakingUpdat
 //  b  : Send true if speaking, false if not.
 func (v *VoiceConnection) Speaking(b bool) (err error) {
 
-	v.log(LogDebug, "called (%t)", b)
+	logrus.Debugf("called (%t)", b)
 
 	type voiceSpeakingData struct {
 		Speaking bool `json:"speaking"`
@@ -103,7 +104,7 @@ func (v *VoiceConnection) Speaking(b bool) (err error) {
 	defer v.Unlock()
 	if err != nil {
 		v.speaking = false
-		v.log(LogError, "Speaking() write json error:", err)
+		logrus.Errorf("Speaking() write json error:", err)
 		return
 	}
 
@@ -116,7 +117,7 @@ func (v *VoiceConnection) Speaking(b bool) (err error) {
 // !!! NOTE !!! This function may be removed in favour of just using ChannelVoiceJoin
 func (v *VoiceConnection) ChangeChannel(channelID string, mute, deaf bool) (err error) {
 
-	v.log(LogInformational, "called")
+	logrus.Debug("called")
 
 	data := voiceChannelJoinOp{4, voiceChannelJoinData{&v.GuildID, &channelID, mute, deaf}}
 	v.wsMutex.Lock()
@@ -150,7 +151,7 @@ func (v *VoiceConnection) Disconnect() (err error) {
 	// Close websocket and udp connections
 	v.Close()
 
-	v.log(LogInformational, "Deleting VoiceConnection %s", v.GuildID)
+	logrus.Infof("Deleting VoiceConnection %s", v.GuildID)
 
 	v.session.Lock()
 	delete(v.session.VoiceConnections, v.GuildID)
@@ -162,7 +163,7 @@ func (v *VoiceConnection) Disconnect() (err error) {
 // Close closes the voice ws and udp connections
 func (v *VoiceConnection) Close() {
 
-	v.log(LogInformational, "called")
+	logrus.Infof("called")
 
 	v.Lock()
 	defer v.Unlock()
@@ -171,22 +172,22 @@ func (v *VoiceConnection) Close() {
 	v.speaking = false
 
 	if v.close != nil {
-		v.log(LogInformational, "closing v.close")
+		logrus.Infof("closing v.close")
 		close(v.close)
 		v.close = nil
 	}
 
 	if v.udpConn != nil {
-		v.log(LogInformational, "closing udp")
+		logrus.Infof("closing udp")
 		err := v.udpConn.Close()
 		if err != nil {
-			v.log(LogError, "error closing udp connection: ", err)
+			logrus.Errorf("error closing udp connection: ", err)
 		}
 		v.udpConn = nil
 	}
 
 	if v.wsConn != nil {
-		v.log(LogInformational, "sending close frame")
+		logrus.Infof("sending close frame")
 
 		// To cleanly close a connection, a client should send a close
 		// frame and wait for the server to close the connection.
@@ -194,16 +195,16 @@ func (v *VoiceConnection) Close() {
 		err := v.wsConn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		v.wsMutex.Unlock()
 		if err != nil {
-			v.log(LogError, "error closing websocket, %s", err)
+			logrus.Errorf("error closing websocket, %s", err)
 		}
 
 		// TODO: Wait for Discord to actually close the connection.
 		time.Sleep(1 * time.Second)
 
-		v.log(LogInformational, "closing websocket")
+		logrus.Infof("closing websocket")
 		err = v.wsConn.Close()
 		if err != nil {
-			v.log(LogError, "error closing websocket, %s", err)
+			logrus.Errorf("error closing websocket, %s", err)
 		}
 
 		v.wsConn = nil
@@ -249,7 +250,7 @@ type voiceOP2 struct {
 // become ready, if it does not become ready it returns an err
 func (v *VoiceConnection) waitUntilConnected() error {
 
-	v.log(LogInformational, "called")
+	logrus.Infof("called")
 
 	i := 0
 	for {
@@ -274,14 +275,14 @@ func (v *VoiceConnection) waitUntilConnected() error {
 // are captured.
 func (v *VoiceConnection) open() (err error) {
 
-	v.log(LogInformational, "called")
+	logrus.Infof("called")
 
 	v.Lock()
 	defer v.Unlock()
 
 	// Don't open a websocket if one is already open
 	if v.wsConn != nil {
-		v.log(LogWarning, "refusing to overwrite non-nil websocket")
+		logrus.Warnf("refusing to overwrite non-nil websocket")
 		return
 	}
 
@@ -300,11 +301,11 @@ func (v *VoiceConnection) open() (err error) {
 
 	// Connect to VoiceConnection Websocket
 	vg := fmt.Sprintf("wss://%s", strings.TrimSuffix(v.endpoint, ":80"))
-	v.log(LogInformational, "connecting to voice endpoint %s", vg)
+	logrus.Infof("connecting to voice endpoint %s", vg)
 	v.wsConn, _, err = websocket.DefaultDialer.Dial(vg, nil)
 	if err != nil {
-		v.log(LogWarning, "error connecting to voice endpoint %s, %s", vg, err)
-		v.log(LogDebug, "voice struct: %#v\n", v)
+		logrus.Warnf("error connecting to voice endpoint %s, %s", vg, err)
+		logrus.Debugf("voice struct: %#v\n", v)
 		return
 	}
 
@@ -322,9 +323,11 @@ func (v *VoiceConnection) open() (err error) {
 
 	err = v.wsConn.WriteJSON(data)
 	if err != nil {
-		v.log(LogWarning, "error sending init packet, %s", err)
+		logrus.Warnf("error sending init packet, %s", err)
 		return
 	}
+
+	logrus.Debugf("start listening on voice connection")
 
 	v.close = make(chan struct{})
 	go v.wsListen(v.wsConn, v.close)
@@ -340,7 +343,7 @@ func (v *VoiceConnection) open() (err error) {
 // to the voice event handler.  This is automatically called by the Open func
 func (v *VoiceConnection) wsListen(wsConn *websocket.Conn, close <-chan struct{}) {
 
-	v.log(LogInformational, "called")
+	logrus.Debug("called")
 
 	for {
 		_, message, err := v.wsConn.ReadMessage()
@@ -353,7 +356,7 @@ func (v *VoiceConnection) wsListen(wsConn *websocket.Conn, close <-chan struct{}
 			v.RUnlock()
 			if sameConnection {
 
-				v.log(LogError, "voice endpoint %s websocket closed unexpectantly, %s", v.endpoint, err)
+				logrus.Errorf("voice endpoint %s websocket closed unexpectantly, %s", v.endpoint, err)
 
 				// Start reconnect goroutine then exit.
 				go v.reconnect()
@@ -375,11 +378,11 @@ func (v *VoiceConnection) wsListen(wsConn *websocket.Conn, close <-chan struct{}
 // wsListen() function.
 func (v *VoiceConnection) onEvent(message []byte) {
 
-	v.log(LogDebug, "received: %s", string(message))
+	logrus.Debugf("received: %s", string(message))
 
 	var e Event
 	if err := json.Unmarshal(message, &e); err != nil {
-		v.log(LogError, "unmarshall error, %s", err)
+		logrus.Errorf("unmarshall error, %s", err)
 		return
 	}
 
@@ -388,7 +391,7 @@ func (v *VoiceConnection) onEvent(message []byte) {
 	case 2: // READY
 
 		if err := json.Unmarshal(e.RawData, &v.op2); err != nil {
-			v.log(LogError, "OP2 unmarshall error, %s, %s", err, string(e.RawData))
+			logrus.Errorf("OP2 unmarshall error, %s, %s", err, string(e.RawData))
 			return
 		}
 
@@ -399,7 +402,7 @@ func (v *VoiceConnection) onEvent(message []byte) {
 		// Start the UDP connection
 		err := v.udpOpen()
 		if err != nil {
-			v.log(LogError, "error opening udp connection, %s", err)
+			logrus.Errorf("error opening udp connection, %s", err)
 			return
 		}
 
@@ -431,7 +434,7 @@ func (v *VoiceConnection) onEvent(message []byte) {
 
 		v.op4 = voiceOP4{}
 		if err := json.Unmarshal(e.RawData, &v.op4); err != nil {
-			v.log(LogError, "OP4 unmarshall error, %s, %s", err, string(e.RawData))
+			logrus.Errorf("OP4 unmarshall error, %s, %s", err, string(e.RawData))
 			return
 		}
 		return
@@ -443,7 +446,7 @@ func (v *VoiceConnection) onEvent(message []byte) {
 
 		voiceSpeakingUpdate := &VoiceSpeakingUpdate{}
 		if err := json.Unmarshal(e.RawData, voiceSpeakingUpdate); err != nil {
-			v.log(LogError, "OP5 unmarshall error, %s, %s", err, string(e.RawData))
+			logrus.Errorf("OP5 unmarshall error, %s, %s", err, string(e.RawData))
 			return
 		}
 
@@ -452,7 +455,7 @@ func (v *VoiceConnection) onEvent(message []byte) {
 		}
 
 	default:
-		v.log(LogDebug, "unknown voice operation, %d, %s", e.Operation, string(e.RawData))
+		logrus.Debugf("unknown voice operation, %d, %s", e.Operation, string(e.RawData))
 	}
 
 	return
@@ -479,12 +482,12 @@ func (v *VoiceConnection) wsHeartbeat(wsConn *websocket.Conn, close <-chan struc
 	ticker := time.NewTicker(i * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		v.log(LogDebug, "sending heartbeat packet")
+		logrus.Debug("sending heartbeat packet")
 		v.wsMutex.Lock()
 		err = wsConn.WriteJSON(voiceHeartbeatOp{3, int(time.Now().Unix())})
 		v.wsMutex.Unlock()
 		if err != nil {
-			v.log(LogError, "error sending heartbeat to voice endpoint %s, %s", v.endpoint, err)
+			logrus.Errorf("error sending heartbeat to voice endpoint %s, %s", v.endpoint, err)
 			return
 		}
 
@@ -542,17 +545,18 @@ func (v *VoiceConnection) udpOpen() (err error) {
 		return fmt.Errorf("empty endpoint")
 	}
 
+	logrus.Debug(v.endpoint)
 	host := fmt.Sprintf("%s:%d", strings.TrimSuffix(v.endpoint, ":80"), v.op2.Port)
 	addr, err := net.ResolveUDPAddr("udp", host)
 	if err != nil {
-		v.log(LogWarning, "error resolving udp host %s, %s", host, err)
+		logrus.Warnf("error resolving udp host %s, %s", host, err)
 		return
 	}
 
-	v.log(LogInformational, "connecting to udp addr %s", addr.String())
+	logrus.Infof("connecting to udp addr %s", addr.String())
 	v.udpConn, err = net.DialUDP("udp", nil, addr)
 	if err != nil {
-		v.log(LogWarning, "error connecting to udp addr %s, %s", addr.String(), err)
+		logrus.Warnf("error connecting to udp addr %s, %s", addr.String(), err)
 		return
 	}
 
@@ -562,7 +566,7 @@ func (v *VoiceConnection) udpOpen() (err error) {
 	binary.BigEndian.PutUint32(sb, v.op2.SSRC)
 	_, err = v.udpConn.Write(sb)
 	if err != nil {
-		v.log(LogWarning, "udp write error to %s, %s", addr.String(), err)
+		logrus.Warnf("udp write error to %s, %s", addr.String(), err)
 		return
 	}
 
@@ -573,12 +577,12 @@ func (v *VoiceConnection) udpOpen() (err error) {
 	rb := make([]byte, 70)
 	rlen, _, err := v.udpConn.ReadFromUDP(rb)
 	if err != nil {
-		v.log(LogWarning, "udp read error, %s, %s", addr.String(), err)
+		logrus.Warnf("udp read error, %s, %s", addr.String(), err)
 		return
 	}
 
 	if rlen < 70 {
-		v.log(LogWarning, "received udp packet too small")
+		logrus.Warn("received udp packet too small")
 		return fmt.Errorf("received udp packet too small")
 	}
 
@@ -603,7 +607,7 @@ func (v *VoiceConnection) udpOpen() (err error) {
 	err = v.wsConn.WriteJSON(data)
 	v.wsMutex.Unlock()
 	if err != nil {
-		v.log(LogWarning, "udp write error, %#v, %s", data, err)
+		logrus.Warnf("udp write error, %#v, %s", data, err)
 		return
 	}
 
@@ -636,7 +640,7 @@ func (v *VoiceConnection) udpKeepAlive(udpConn *net.UDPConn, close <-chan struct
 
 		_, err = udpConn.Write(packet)
 		if err != nil {
-			v.log(LogError, "write error, %s", err)
+			logrus.Errorf("write error, %s", err)
 			return
 		}
 
@@ -702,7 +706,7 @@ func (v *VoiceConnection) opusSender(udpConn *net.UDPConn, close <-chan struct{}
 		if !speaking {
 			err := v.Speaking(true)
 			if err != nil {
-				v.log(LogError, "error sending speaking packet, %s", err)
+				logrus.Errorf("error sending speaking packet, %s", err)
 			}
 		}
 
@@ -727,8 +731,8 @@ func (v *VoiceConnection) opusSender(udpConn *net.UDPConn, close <-chan struct{}
 		_, err := udpConn.Write(sendbuf)
 
 		if err != nil {
-			v.log(LogError, "udp write error, %s", err)
-			v.log(LogDebug, "voice struct: %#v\n", v)
+			logrus.Errorf("udp write error, %s", err)
+			logrus.Debugf("voice struct: %#v\n", v)
 			return
 		}
 
@@ -768,6 +772,8 @@ func (v *VoiceConnection) opusReceiver(udpConn *net.UDPConn, close <-chan struct
 	recvbuf := make([]byte, 1024)
 	var nonce [24]byte
 
+	logrus.Debug("called")
+
 	for {
 		rlen, err := udpConn.Read(recvbuf)
 		if err != nil {
@@ -779,8 +785,8 @@ func (v *VoiceConnection) opusReceiver(udpConn *net.UDPConn, close <-chan struct
 			v.RUnlock()
 			if sameConnection {
 
-				v.log(LogError, "udp read error, %s, %s", v.endpoint, err)
-				v.log(LogDebug, "voice struct: %#v\n", v)
+				logrus.Errorf("udp read error, %s, %s", v.endpoint, err)
+				logrus.Debugf("voice struct: %#v\n", v)
 
 				go v.reconnect()
 			}
@@ -796,8 +802,11 @@ func (v *VoiceConnection) opusReceiver(udpConn *net.UDPConn, close <-chan struct
 
 		// For now, skip anything except audio.
 		if rlen < 12 || (recvbuf[0] != 0x80 && recvbuf[0] != 0x90) {
+			logrus.Debug("packet is not audio")
 			continue
 		}
+
+		logrus.Debug("packet is audio")
 
 		// build a audio packet struct
 		p := Packet{}
@@ -831,11 +840,11 @@ func (v *VoiceConnection) opusReceiver(udpConn *net.UDPConn, close <-chan struct
 // aka: this is ugly shit code, please don't judge too harshly.
 func (v *VoiceConnection) reconnect() {
 
-	v.log(LogInformational, "called")
+	logrus.Debug("called")
 
 	v.Lock()
 	if v.reconnecting {
-		v.log(LogInformational, "already reconnecting to channel %s, exiting", v.ChannelID)
+		logrus.Infof("already reconnecting to channel %s, exiting", v.ChannelID)
 		v.Unlock()
 		return
 	}
@@ -857,19 +866,19 @@ func (v *VoiceConnection) reconnect() {
 		}
 
 		if v.session.DataReady == false || v.session.wsConn == nil {
-			v.log(LogInformational, "cannot reconnect to channel %s with unready session", v.ChannelID)
+			logrus.Warnf("cannot reconnect to channel %s with unready session", v.ChannelID)
 			continue
 		}
 
-		v.log(LogInformational, "trying to reconnect to channel %s", v.ChannelID)
+		logrus.Infof("trying to reconnect to channel %s", v.ChannelID)
 
 		_, err := v.session.ChannelVoiceJoin(v.GuildID, v.ChannelID, v.mute, v.deaf)
 		if err == nil {
-			v.log(LogInformational, "successfully reconnected to channel %s", v.ChannelID)
+			logrus.Infof("successfully reconnected to channel %s", v.ChannelID)
 			return
 		}
 
-		v.log(LogInformational, "error reconnecting to channel %s, %s", v.ChannelID, err)
+		logrus.Infof("error reconnecting to channel %s, %s", v.ChannelID, err)
 
 		// if the reconnect above didn't work lets just send a disconnect
 		// packet to reset things.
@@ -879,7 +888,7 @@ func (v *VoiceConnection) reconnect() {
 		err = v.session.wsConn.WriteJSON(data)
 		v.session.wsMutex.Unlock()
 		if err != nil {
-			v.log(LogError, "error sending disconnect packet, %s", err)
+			logrus.Errorf("error sending disconnect packet, %s", err)
 		}
 
 	}

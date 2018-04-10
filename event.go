@@ -1,5 +1,7 @@
 package discordgo
 
+import "github.com/sirupsen/logrus"
+
 // EventHandler is an interface for Discord events.
 type EventHandler interface {
 	// Type returns the type of event this handler belongs to.
@@ -121,7 +123,7 @@ func (s *Session) AddHandler(handler interface{}) func() {
 	eh := handlerForInterface(handler)
 
 	if eh == nil {
-		s.log(LogError, "Invalid handler type, handler will never be called")
+		logrus.Errorf("Invalid handler type, handler will never be called")
 		return func() {}
 	}
 
@@ -135,7 +137,7 @@ func (s *Session) AddHandlerOnce(handler interface{}) func() {
 	eh := handlerForInterface(handler)
 
 	if eh == nil {
-		s.log(LogError, "Invalid handler type, handler will never be called")
+		logrus.Errorf("Invalid handler type, handler will never be called")
 		return func() {}
 	}
 
@@ -235,7 +237,7 @@ func (s *Session) onInterface(i interface{}) {
 	}
 	err := s.State.OnInterface(s, i)
 	if err != nil {
-		s.log(LogDebug, "error dispatching internal event, %s", err)
+		logrus.Debugf("error dispatching internal event, %s", err)
 	}
 }
 
