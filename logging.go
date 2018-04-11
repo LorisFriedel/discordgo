@@ -13,23 +13,24 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 func init() {
-	logrus.AddHook(&SourceCodeHook{})
+	log.AddHook(&SourceCodeHook{})
 }
 
 type SourceCodeHook struct {
 }
 
-func (sch *SourceCodeHook) Levels() []logrus.Level {
-	return logrus.AllLevels
+func (sch *SourceCodeHook) Levels() []log.Level {
+	return log.AllLevels
 }
 
-func (sch *SourceCodeHook) Fire(e *logrus.Entry) error {
+func (sch *SourceCodeHook) Fire(e *log.Entry) error {
 	file, function, line := findCaller(5)
-	e.Message = fmt.Sprintf("%s:%d:%s() ", file, line, function) + e.Message
+	e.Message = fmt.Sprintf("[%d] %s:%d:%s() ", time.Now().Unix(), file, line, function) + e.Message
 	return nil
 }
 

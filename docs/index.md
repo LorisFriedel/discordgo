@@ -13,16 +13,16 @@ gamers that's free, secure, and works on both your desktop and phone.
 ### Why DiscordGo?
 * High Performance
 * Minimal Memory & CPU Load
-* Low-level bindings to Discord REST API Endpoints
+* Low-level bindings to Discord REST API endpoint.s
 * Support for the data websocket interface
 * Multi-Server voice connections (send and receive)
 * State tracking and caching
 
 ### Learn More
 * Check out the [Getting Started](GettingStarted) section
-* Read the reference docs on [Godoc](https://godoc.org/github.com/bwmarrin/discordgo) or [GoWalker](https://gowalker.org/github.com/bwmarrin/discordgo)
-* Try the [examples](https://github.com/bwmarrin/discordgo/tree/master/examples)
-* Explore [Awesome DiscordGo](https://github.com/bwmarrin/discordgo/wiki/Awesome-DiscordGo)
+* Read the reference docs on [Godoc](https://godoc.org/github.com/LorisFriedel/discordgo) or [GoWalker](https://gowalker.org/github.com/bwmarrin/discordgo)
+* Try the [examples](https://github.com/LorisFriedel/discordgo/tree/master/examples)
+* Explore [Awesome DiscordGo](https://github.com/LorisFriedel/discordgo/wiki/Awesome-DiscordGo)
 
 ### Join Us!
 Both of the below links take you to chat channels where you can get more 

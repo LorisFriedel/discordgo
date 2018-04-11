@@ -1,6 +1,6 @@
 package discordgo
 
-import "github.com/sirupsen/logrus"
+import log "github.com/sirupsen/logrus"
 
 // EventHandler is an interface for Discord events.
 type EventHandler interface {
@@ -60,6 +60,18 @@ func registerInterfaceProvider(eh EventInterfaceProvider) {
 // cannot be compared directly.
 type eventHandlerInstance struct {
 	eventHandler EventHandler
+}
+
+type SessionEvent interface {
+	addEventHandler(eventHandler EventHandler) func()
+	addEventHandlerOnce(eventHandler EventHandler) func()
+	AddHandler(handler interface{}) func()
+	AddHandlerOnce(handler interface{}) func()
+	removeEventHandlerInstance(t string, ehi *eventHandlerInstance)
+	handle(t string, i interface{})
+	handleEvent(t string, i interface{})
+	onInterface(i interface{})
+	onReady(r *Ready)
 }
 
 // addEventHandler adds an event handler that will be fired anytime
@@ -123,7 +135,7 @@ func (s *Session) AddHandler(handler interface{}) func() {
 	eh := handlerForInterface(handler)
 
 	if eh == nil {
-		logrus.Errorf("Invalid handler type, handler will never be called")
+		log.Errorf("Invalid handler type, handler will never be called")
 		return func() {}
 	}
 
@@ -137,7 +149,7 @@ func (s *Session) AddHandlerOnce(handler interface{}) func() {
 	eh := handlerForInterface(handler)
 
 	if eh == nil {
-		logrus.Errorf("Invalid handler type, handler will never be called")
+		log.Errorf("Invalid handler type, handler will never be called")
 		return func() {}
 	}
 
@@ -237,7 +249,7 @@ func (s *Session) onInterface(i interface{}) {
 	}
 	err := s.State.OnInterface(s, i)
 	if err != nil {
-		logrus.Debugf("error dispatching internal event, %s", err)
+		log.Debugf("error dispatching internal event, %s", err)
 	}
 }
 

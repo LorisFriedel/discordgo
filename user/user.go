@@ -1,8 +1,9 @@
-package discordgo
+package user
 
 import (
 	"fmt"
 	"strings"
+	"github.com/LorisFriedel/discordgo/endpoint"
 )
 
 // A User stores all data for an individual Discord user.
@@ -55,11 +56,11 @@ func (u *User) Mention() string {
 func (u *User) AvatarURL(size string) string {
 	var URL string
 	if u.Avatar == "" {
-		URL = EndpointDefaultUserAvatar(u.Discriminator)
+		URL = endpoint.DefaultUserAvatar(u.Discriminator)
 	} else if strings.HasPrefix(u.Avatar, "a_") {
-		URL = EndpointUserAvatarAnimated(u.ID, u.Avatar)
+		URL = endpoint.UserAvatarAnimated(u.ID, u.Avatar)
 	} else {
-		URL = EndpointUserAvatar(u.ID, u.Avatar)
+		URL = endpoint.UserAvatar(u.ID, u.Avatar)
 	}
 
 	if size != "" {

@@ -36,7 +36,7 @@ The below example shows how to start the bot from the airhorn example folder.
 
 ### Creating sounds
 
-Airhorn bot uses [DCA](https://github.com/bwmarrin/dca) files, which are 
+Airhorn bot uses [DCA](https://github.com/LorisFriedel/dca) files, which are
 pre-computed files that are easy to send to Discord.
 
 If you would like to create your own DCA files, please use:

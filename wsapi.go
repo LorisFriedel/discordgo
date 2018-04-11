@@ -23,7 +23,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
+	"github.com/LorisFriedel/discordgo/endpoint"
 )
 
 // ErrWSAlreadyOpen is thrown when you attempt to open
@@ -50,7 +51,7 @@ type resumePacket struct {
 // Open creates a websocket connection to Discord.
 // See: https://discordapp.com/developers/docs/topics/gateway#connecting
 func (s *Session) Open() error {
-	logrus.Infof("called")
+	log.Infof("called")
 
 	var err error
 
@@ -72,16 +73,16 @@ func (s *Session) Open() error {
 		}
 
 		// Add the version and encoding to the URL
-		s.gateway = s.gateway + "?v=" + APIVersion + "&encoding=json"
+		s.gateway = s.gateway + "?v=" + endpoint.APIVersion + "&encoding=json"
 	}
 
 	// Connect to the Gateway
-	logrus.Infof("connecting to gateway %s", s.gateway)
+	log.Infof("connecting to gateway %s", s.gateway)
 	header := http.Header{}
 	header.Add("accept-encoding", "zlib")
 	s.wsConn, _, err = websocket.DefaultDialer.Dial(s.gateway, header)
 	if err != nil {
-		logrus.Warnf("error connecting to gateway %s, %s", s.gateway, err)
+		log.Warnf("error connecting to gateway %s, %s", s.gateway, err)
 		s.gateway = "" // clear cached gateway
 		s.wsConn = nil // Just to be safe.
 		return err
@@ -107,13 +108,13 @@ func (s *Session) Open() error {
 	if err != nil {
 		return err
 	}
-	if e.Operation != 10 {
-		err = fmt.Errorf("expecting Op 10, got Op %d instead", e.Operation)
+	if e.Opcode != 10 { // TODO
+		err = fmt.Errorf("expecting Op 10, got Op %d instead", e.Opcode)
 		return err
 	}
-	logrus.Infof("Op 10 Hello Packet received from Discord")
+	log.Infof("Op 10 Hello Packet received from Discord")
 	s.LastHeartbeatAck = time.Now().UTC()
-	var h helloOp
+	var h helloOp // TODO
 	if err = json.Unmarshal(e.RawData, &h); err != nil {
 		err = fmt.Errorf("error unmarshalling helloOp, %s", err)
 		return err
@@ -135,12 +136,12 @@ func (s *Session) Open() error {
 
 		// Send Op 6 Resume Packet
 		p := resumePacket{}
-		p.Op = 6
+		p.Op = 6 // TODO
 		p.Data.Token = s.Token
 		p.Data.SessionID = s.sessionID
 		p.Data.Sequence = sequence
 
-		logrus.Infof("sending resume packet to gateway")
+		log.Infof("sending resume packet to gateway")
 		s.wsMutex.Lock()
 		err = s.wsConn.WriteJSON(p)
 		s.wsMutex.Unlock()
@@ -174,19 +175,19 @@ func (s *Session) Open() error {
 	if err != nil {
 		return err
 	}
-	if e.Type != `READY` && e.Type != `RESUMED` {
+	if e.Type != `READY` && e.Type != `RESUMED` { // TODO
 		// This is not fatal, but it does not follow their API documentation.
-		logrus.Warnf("Expected READY/RESUMED, instead got:\n%#v\n", e)
+		log.Warnf("Expected READY/RESUMED, instead got:\n%#v\n", e)
 	}
-	logrus.Infof("First Packet:\n%#v\n", e)
+	log.Infof("First Packet:\n%#v\n", e)
 
-	logrus.Infof("We are now connected to Discord, emitting connect event")
+	log.Infof("We are now connected to Discord, emitting connect event")
 	s.handleEvent(connectEventType, &Connect{})
 
 	// A VoiceConnections map is a hard requirement for Voice.
 	// XXX: can this be moved to when opening a voice connection?
 	if s.VoiceConnections == nil {
-		logrus.Infof("creating new VoiceConnections map")
+		log.Infof("creating new VoiceConnections map")
 		s.VoiceConnections = make(map[string]*VoiceConnection)
 	}
 
@@ -199,7 +200,7 @@ func (s *Session) Open() error {
 	go s.heartbeat(s.wsConn, s.listening, h.HeartbeatInterval)
 	go s.listen(s.wsConn, s.listening)
 
-	logrus.Infof("exiting")
+	log.Infof("exiting")
 	return nil
 }
 
@@ -207,7 +208,7 @@ func (s *Session) Open() error {
 // listening channel is closed, or an error occurs.
 func (s *Session) listen(wsConn *websocket.Conn, listening <-chan interface{}) {
 
-	logrus.Infof("called")
+	log.Infof("called")
 
 	for {
 
@@ -224,15 +225,15 @@ func (s *Session) listen(wsConn *websocket.Conn, listening <-chan interface{}) {
 
 			if sameConnection {
 
-				logrus.Warnf("error reading from gateway %s websocket, %s", s.gateway, err)
+				log.Warnf("error reading from gateway %s websocket, %s", s.gateway, err)
 				// There has been an error reading, close the websocket so that
 				// OnDisconnect event is emitted.
 				err := s.Close()
 				if err != nil {
-					logrus.Warnf("error closing session connection, %s", err)
+					log.Warnf("error closing session connection, %s", err)
 				}
 
-				logrus.Infof("calling reconnect() now")
+				log.Infof("calling reconnect() now")
 				s.reconnect()
 			}
 
@@ -269,7 +270,7 @@ const FailedHeartbeatAcks time.Duration = 5 * time.Millisecond
 // disconnect the websocket connection after a few seconds.
 func (s *Session) heartbeat(wsConn *websocket.Conn, listening <-chan interface{}, heartbeatIntervalMsec time.Duration) {
 
-	logrus.Infof("called")
+	log.Infof("called")
 
 	if listening == nil || wsConn == nil {
 		return
@@ -284,15 +285,15 @@ func (s *Session) heartbeat(wsConn *websocket.Conn, listening <-chan interface{}
 		last := s.LastHeartbeatAck
 		s.RUnlock()
 		sequence := atomic.LoadInt64(s.sequence)
-		logrus.Infof("sending gateway websocket heartbeat seq %d", sequence)
+		log.Infof("sending gateway websocket heartbeat seq %d", sequence)
 		s.wsMutex.Lock()
 		err = wsConn.WriteJSON(heartbeatOp{1, sequence})
 		s.wsMutex.Unlock()
 		if err != nil || time.Now().UTC().Sub(last) > (heartbeatIntervalMsec*FailedHeartbeatAcks) {
 			if err != nil {
-				logrus.Errorf("error sending heartbeat to gateway %s, %s", s.gateway, err)
+				log.Errorf("error sending heartbeat to gateway %s, %s", s.gateway, err)
 			} else {
-				logrus.Errorf("haven't gotten a heartbeat ACK in %v, triggering a reconnection", time.Now().UTC().Sub(last))
+				log.Errorf("haven't gotten a heartbeat ACK in %v, triggering a reconnection", time.Now().UTC().Sub(last))
 			}
 			s.Close()
 			s.reconnect()
@@ -405,7 +406,7 @@ type requestGuildMembersOp struct {
 // query    : String that username starts with, leave empty to return all members
 // limit    : Max number of items to return, or 0 to request all members matched
 func (s *Session) RequestGuildMembers(guildID, query string, limit int) (err error) {
-	logrus.Infof("called")
+	log.Infof("called")
 
 	s.RLock()
 	defer s.RUnlock()
@@ -445,14 +446,14 @@ func (s *Session) onEvent(messageType int, message []byte) (*Event, error) {
 
 		z, err2 := zlib.NewReader(reader)
 		if err2 != nil {
-			logrus.Errorf("error uncompressing websocket message, %s", err)
+			log.Errorf("error uncompressing websocket message, %s", err)
 			return nil, err2
 		}
 
 		defer func() {
 			err3 := z.Close()
 			if err3 != nil {
-				logrus.Warnf("error closing zlib, %s", err)
+				log.Warnf("error closing zlib, %s", err)
 			}
 		}()
 
@@ -463,21 +464,21 @@ func (s *Session) onEvent(messageType int, message []byte) (*Event, error) {
 	var e *Event
 	decoder := json.NewDecoder(reader)
 	if err = decoder.Decode(&e); err != nil {
-		logrus.Errorf("error decoding websocket message, %s", err)
+		log.Errorf("error decoding websocket message, %s", err)
 		return e, err
 	}
 
-	logrus.Debugf("Op: %d, Seq: %d, Type: %s, Data: %s\n\n", e.Operation, e.Sequence, e.Type, string(e.RawData))
+	log.Debugf("Op: %d, Seq: %d, Type: %s, Data: %s\n\n", e.Opcode, e.Sequence, e.Type, string(e.RawData))
 
 	// Ping request.
 	// Must respond with a heartbeat packet within 5 seconds
-	if e.Operation == 1 {
-		logrus.Infof("sending heartbeat in response to Op1")
+	if e.Opcode == 1 { // TODO
+		log.Infof("sending heartbeat in response to Op1")
 		s.wsMutex.Lock()
 		err = s.wsConn.WriteJSON(heartbeatOp{1, atomic.LoadInt64(s.sequence)})
 		s.wsMutex.Unlock()
 		if err != nil {
-			logrus.Errorf("error sending heartbeat in response to Op1")
+			log.Errorf("error sending heartbeat in response to Op1")
 			return e, err
 		}
 
@@ -486,8 +487,8 @@ func (s *Session) onEvent(messageType int, message []byte) (*Event, error) {
 
 	// Reconnect
 	// Must immediately disconnect from gateway and reconnect to new gateway.
-	if e.Operation == 7 {
-		logrus.Infof("Closing and reconnecting in response to Op7")
+	if e.Opcode == 7 { // TODO
+		log.Infof("Closing and reconnecting in response to Op7")
 		s.Close()
 		s.reconnect()
 		return e, nil
@@ -495,37 +496,37 @@ func (s *Session) onEvent(messageType int, message []byte) (*Event, error) {
 
 	// Invalid Session
 	// Must respond with a Identify packet.
-	if e.Operation == 9 {
+	if e.Opcode == 9 { // TODO
 
-		logrus.Infof("sending identify packet to gateway in response to Op9")
+		log.Infof("sending identify packet to gateway in response to Op9")
 
 		err = s.identify()
 		if err != nil {
-			logrus.Warnf("error sending gateway identify packet, %s, %s", s.gateway, err)
+			log.Warnf("error sending gateway identify packet, %s, %s", s.gateway, err)
 			return e, err
 		}
 
 		return e, nil
 	}
 
-	if e.Operation == 10 {
+	if e.Opcode == 10 { // TODO
 		// Op10 is handled by Open()
 		return e, nil
 	}
 
-	if e.Operation == 11 {
+	if e.Opcode == 11 { // TODO
 		s.Lock()
 		s.LastHeartbeatAck = time.Now().UTC()
 		s.Unlock()
-		logrus.Infof("got heartbeat ACK")
+		log.Infof("got heartbeat ACK")
 		return e, nil
 	}
 
 	// Do not try to Dispatch a non-Dispatch Message
-	if e.Operation != 0 {
+	if e.Opcode != 0 { // TODO
 		// But we probably should be doing something with them.
 		// TEMP
-		logrus.Warnf("unknown Op: %d, Seq: %d, Type: %s, Data: %s, message: %s", e.Operation, e.Sequence, e.Type, string(e.RawData), string(message))
+		log.Warnf("unknown Op: %d, Seq: %d, Type: %s, Data: %s, message: %s", e.Opcode, e.Sequence, e.Type, string(e.RawData), string(message))
 		return e, nil
 	}
 
@@ -538,7 +539,7 @@ func (s *Session) onEvent(messageType int, message []byte) (*Event, error) {
 
 		// Attempt to unmarshal our event.
 		if err = json.Unmarshal(e.RawData, e.Struct); err != nil {
-			logrus.Errorf("error unmarshalling %s event, %s", e.Type, err)
+			log.Errorf("error unmarshalling %s event, %s", e.Type, err)
 		}
 
 		// Send event to any registered event handlers for it's type.
@@ -550,7 +551,7 @@ func (s *Session) onEvent(messageType int, message []byte) (*Event, error) {
 		// Either way, READY events must fire, even with errors.
 		s.handleEvent(e.Type, e.Struct)
 	} else {
-		logrus.Warnf("unknown event: Op: %d, Seq: %d, Type: %s, Data: %s", e.Operation, e.Sequence, e.Type, string(e.RawData))
+		log.Warnf("unknown event: Op: %d, Seq: %d, Type: %s, Data: %s", e.Opcode, e.Sequence, e.Type, string(e.RawData))
 	}
 
 	// For legacy reasons, we send the raw event also, this could be useful for handling unknown events.
@@ -563,17 +564,6 @@ func (s *Session) onEvent(messageType int, message []byte) (*Event, error) {
 // Code related to voice connections that initiate over the data websocket
 // ------------------------------------------------------------------------------------------------
 
-type voiceChannelJoinData struct {
-	GuildID   *string `json:"guild_id"`
-	ChannelID *string `json:"channel_id"`
-	SelfMute  bool    `json:"self_mute"`
-	SelfDeaf  bool    `json:"self_deaf"`
-}
-
-type voiceChannelJoinOp struct {
-	Op   int                  `json:"op"`
-	Data voiceChannelJoinData `json:"d"`
-}
 
 // ChannelVoiceJoin joins the session user to a voice channel.
 //
@@ -583,7 +573,7 @@ type voiceChannelJoinOp struct {
 //    deaf    : If true, you will be set to deafened upon joining.
 func (s *Session) ChannelVoiceJoin(gID, cID string, mute, deaf bool) (voice *VoiceConnection, err error) {
 
-	logrus.Infof("called")
+	log.Infof("called")
 
 	s.RLock()
 	voice, _ = s.VoiceConnections[gID]
@@ -605,7 +595,7 @@ func (s *Session) ChannelVoiceJoin(gID, cID string, mute, deaf bool) (voice *Voi
 	voice.Unlock()
 
 	// Send the request to Discord that we want to join the voice channel
-	data := voiceChannelJoinOp{4, voiceChannelJoinData{&gID, &cID, mute, deaf}}
+	data := VoiceChannelJoinOp{4, VoiceChannelJoinData{&gID, &cID, mute, deaf}}
 	s.wsMutex.Lock()
 	err = s.wsConn.WriteJSON(data)
 	s.wsMutex.Unlock()
@@ -616,7 +606,7 @@ func (s *Session) ChannelVoiceJoin(gID, cID string, mute, deaf bool) (voice *Voi
 	// doesn't exactly work perfect yet.. TODO
 	err = voice.waitUntilConnected()
 	if err != nil {
-		logrus.Warnf("error waiting for voice to connect, %s", err)
+		log.Warnf("error waiting for voice to connect, %s", err)
 		voice.Close()
 		return
 	}
@@ -660,7 +650,7 @@ func (s *Session) onVoiceStateUpdate(st *VoiceStateUpdate) {
 // the new region endpoint.
 func (s *Session) onVoiceServerUpdate(st *VoiceServerUpdate) {
 
-	logrus.Debug("called")
+	log.Debug("called")
 
 	s.RLock()
 	voice, exists := s.VoiceConnections[st.GuildID]
@@ -685,7 +675,7 @@ func (s *Session) onVoiceServerUpdate(st *VoiceServerUpdate) {
 	// Open a connection to the voice server
 	err := voice.open()
 	if err != nil {
-		logrus.Errorf("onVoiceServerUpdate voice.open, %s", err)
+		log.Errorf("onVoiceServerUpdate voice.open, %s", err)
 	}
 }
 
@@ -747,7 +737,7 @@ func (s *Session) identify() error {
 
 func (s *Session) reconnect() {
 
-	logrus.Infof("called")
+	log.Infof("called")
 
 	var err error
 
@@ -756,11 +746,11 @@ func (s *Session) reconnect() {
 		wait := time.Duration(1)
 
 		for {
-			logrus.Infof("trying to reconnect to gateway")
+			log.Infof("trying to reconnect to gateway")
 
 			err = s.Open()
 			if err == nil {
-				logrus.Infof("successfully reconnected to gateway")
+				log.Infof("successfully reconnected to gateway")
 
 				// I'm not sure if this is actually needed.
 				// if the gw reconnect works properly, voice should stay alive
@@ -771,7 +761,7 @@ func (s *Session) reconnect() {
 				defer s.RUnlock()
 				for _, v := range s.VoiceConnections {
 
-					logrus.Infof("reconnecting voice connection to guild %s", v.GuildID)
+					log.Infof("reconnecting voice connection to guild %s", v.GuildID)
 					go v.reconnect()
 
 					// This is here just to prevent violently spamming the
@@ -785,11 +775,11 @@ func (s *Session) reconnect() {
 			// Certain race conditions can call reconnect() twice. If this happens, we
 			// just break out of the reconnect loop
 			if err == ErrWSAlreadyOpen {
-				logrus.Infof("Websocket already exists, no need to reconnect")
+				log.Infof("Websocket already exists, no need to reconnect")
 				return
 			}
 
-			logrus.Errorf("error reconnecting to gateway, %s", err)
+			log.Errorf("error reconnecting to gateway, %s", err)
 
 			<-time.After(wait * time.Second)
 			wait *= 2
@@ -804,13 +794,13 @@ func (s *Session) reconnect() {
 // TODO: Add support for Voice WS/UDP connections
 func (s *Session) Close() (err error) {
 
-	logrus.Infof("called")
+	log.Infof("called")
 	s.Lock()
 
 	s.DataReady = false
 
 	if s.listening != nil {
-		logrus.Infof("closing listening channel")
+		log.Infof("closing listening channel")
 		close(s.listening)
 		s.listening = nil
 	}
@@ -820,23 +810,23 @@ func (s *Session) Close() (err error) {
 
 	if s.wsConn != nil {
 
-		logrus.Infof("sending close frame")
+		log.Infof("sending close frame")
 		// To cleanly close a connection, a client should send a close
 		// frame and wait for the server to close the connection.
 		s.wsMutex.Lock()
 		err := s.wsConn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		s.wsMutex.Unlock()
 		if err != nil {
-			logrus.Infof("error closing websocket, %s", err)
+			log.Infof("error closing websocket, %s", err)
 		}
 
 		// TODO: Wait for Discord to actually close the connection.
 		time.Sleep(1 * time.Second)
 
-		logrus.Infof("closing gateway websocket")
+		log.Infof("closing gateway websocket")
 		err = s.wsConn.Close()
 		if err != nil {
-			logrus.Infof("error closing websocket, %s", err)
+			log.Infof("error closing websocket, %s", err)
 		}
 
 		s.wsConn = nil
@@ -844,7 +834,7 @@ func (s *Session) Close() (err error) {
 
 	s.Unlock()
 
-	logrus.Infof("emit disconnect event")
+	log.Infof("emit disconnect event")
 	s.handleEvent(disconnectEventType, &Disconnect{})
 
 	return

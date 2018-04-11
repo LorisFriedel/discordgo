@@ -9,6 +9,11 @@
 
 package discordgo
 
+import (
+	"github.com/LorisFriedel/discordgo/endpoint"
+	"github.com/LorisFriedel/discordgo/user"
+)
+
 // ------------------------------------------------------------------------------------------------
 // Code specific to Discord OAuth2 Applications
 // ------------------------------------------------------------------------------------------------
@@ -25,15 +30,15 @@ type Application struct {
 	BotPublic           bool      `json:"bot_public,omitempty"`
 	RPCApplicationState int       `json:"rpc_application_state,omitempty"`
 	Flags               int       `json:"flags,omitempty"`
-	Owner               *User     `json:"owner"`
-	Bot                 *User     `json:"bot"`
+	Owner               *user.User     `json:"owner"`
+	Bot                 *user.User     `json:"bot"`
 }
 
 // Application returns an Application structure of a specific Application
 //   appID : The ID of an Application
 func (s *Session) Application(appID string) (st *Application, err error) {
 
-	body, err := s.RequestWithBucketID("GET", EndpointApplication(appID), nil, EndpointApplication(""))
+	body, err := s.RequestWithBucketID("GET", endpoint.Application(appID), nil, endpoint.Application(""))
 	if err != nil {
 		return
 	}
@@ -45,7 +50,7 @@ func (s *Session) Application(appID string) (st *Application, err error) {
 // Applications returns all applications for the authenticated user
 func (s *Session) Applications() (st []*Application, err error) {
 
-	body, err := s.RequestWithBucketID("GET", EndpointApplications, nil, EndpointApplications)
+	body, err := s.RequestWithBucketID("GET", endpoint.Applications, nil, endpoint.Applications)
 	if err != nil {
 		return
 	}
@@ -65,7 +70,7 @@ func (s *Session) ApplicationCreate(ap *Application) (st *Application, err error
 		RedirectURIs *[]string `json:"redirect_uris,omitempty"`
 	}{ap.Name, ap.Description, ap.RedirectURIs}
 
-	body, err := s.RequestWithBucketID("POST", EndpointApplications, data, EndpointApplications)
+	body, err := s.RequestWithBucketID("POST", endpoint.Applications, data, endpoint.Applications)
 	if err != nil {
 		return
 	}
@@ -84,7 +89,7 @@ func (s *Session) ApplicationUpdate(appID string, ap *Application) (st *Applicat
 		RedirectURIs *[]string `json:"redirect_uris,omitempty"`
 	}{ap.Name, ap.Description, ap.RedirectURIs}
 
-	body, err := s.RequestWithBucketID("PUT", EndpointApplication(appID), data, EndpointApplication(""))
+	body, err := s.RequestWithBucketID("PUT", endpoint.Application(appID), data, endpoint.Application(""))
 	if err != nil {
 		return
 	}
@@ -97,7 +102,7 @@ func (s *Session) ApplicationUpdate(appID string, ap *Application) (st *Applicat
 //   appID : The ID of an Application
 func (s *Session) ApplicationDelete(appID string) (err error) {
 
-	_, err = s.RequestWithBucketID("DELETE", EndpointApplication(appID), nil, EndpointApplication(""))
+	_, err = s.RequestWithBucketID("DELETE", endpoint.Application(appID), nil, endpoint.Application(""))
 	if err != nil {
 		return
 	}
@@ -114,9 +119,9 @@ func (s *Session) ApplicationDelete(appID string) (err error) {
 //   appID : The ID of an Application
 //
 // NOTE: func name may change, if I can think up something better.
-func (s *Session) ApplicationBotCreate(appID string) (st *User, err error) {
+func (s *Session) ApplicationBotCreate(appID string) (st *user.User, err error) {
 
-	body, err := s.RequestWithBucketID("POST", EndpointApplicationsBot(appID), nil, EndpointApplicationsBot(""))
+	body, err := s.RequestWithBucketID("POST", endpoint.ApplicationsBot(appID), nil, endpoint.ApplicationsBot(""))
 	if err != nil {
 		return
 	}

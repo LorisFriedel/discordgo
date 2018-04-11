@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/LorisFriedel/discordgo/user"
 )
 
 // A Session represents a connection to the Discord API.
@@ -30,10 +31,6 @@ type Session struct {
 	// Authentication token for this session
 	Token string
 	MFA   bool
-
-	// Debug for printing JSON request/responses
-	Debug    bool // Deprecated, will be removed.
-	LogLevel int
 
 	// Should the session reconnect the websocket on errors.
 	ShouldReconnectOnError bool
@@ -69,7 +66,7 @@ type Session struct {
 	// Whether the Voice Websocket is ready
 	VoiceReady bool // NOTE: Deprecated.
 
-	// Whether the UDP Connection is ready
+	// Whether the UDP VoiceConnection is ready
 	UDPReady bool // NOTE: Deprecated
 
 	// Stores a mapping of guild id's to VoiceConnections
@@ -112,7 +109,7 @@ type Session struct {
 	wsMutex sync.Mutex
 }
 
-// UserConnection is a Connection returned from the UserConnections endpoint
+// UserConnection is a VoiceConnection returned from the UserConnections endpoint
 type UserConnection struct {
 	ID           string         `json:"id"`
 	Name         string         `json:"name"`
@@ -131,7 +128,7 @@ type Integration struct {
 	RoleID            string             `json:"role_id"`
 	ExpireBehavior    int                `json:"expire_behavior"`
 	ExpireGracePeriod int                `json:"expire_grace_period"`
-	User              *User              `json:"user"`
+	User              *user.User         `json:"user"`
 	Account           IntegrationAccount `json:"account"`
 	SyncedAt          Timestamp          `json:"synced_at"`
 }
@@ -166,17 +163,17 @@ type ICEServer struct {
 
 // A Invite stores all data related to a specific Discord Guild or Channel invite.
 type Invite struct {
-	Guild     *Guild    `json:"guild"`
-	Channel   *Channel  `json:"channel"`
-	Inviter   *User     `json:"inviter"`
-	Code      string    `json:"code"`
-	CreatedAt Timestamp `json:"created_at"`
-	MaxAge    int       `json:"max_age"`
-	Uses      int       `json:"uses"`
-	MaxUses   int       `json:"max_uses"`
-	Revoked   bool      `json:"revoked"`
-	Temporary bool      `json:"temporary"`
-	Unique    bool      `json:"unique"`
+	Guild     *Guild     `json:"guild"`
+	Channel   *Channel   `json:"channel"`
+	Inviter   *user.User `json:"inviter"`
+	Code      string     `json:"code"`
+	CreatedAt Timestamp  `json:"created_at"`
+	MaxAge    int        `json:"max_age"`
+	Uses      int        `json:"uses"`
+	MaxUses   int        `json:"max_uses"`
+	Revoked   bool       `json:"revoked"`
+	Temporary bool       `json:"temporary"`
+	Unique    bool       `json:"unique"`
 }
 
 // ChannelType is the type of a Channel
@@ -184,7 +181,7 @@ type ChannelType int
 
 // Block contains known ChannelType values
 const (
-	ChannelTypeGuildText ChannelType = iota
+	ChannelTypeGuildText     ChannelType = iota
 	ChannelTypeDM
 	ChannelTypeGuildVoice
 	ChannelTypeGroupDM
@@ -223,7 +220,7 @@ type Channel struct {
 	Bitrate int `json:"bitrate"`
 
 	// The recipients of the channel. This is only populated in DM channels.
-	Recipients []*User `json:"recipients"`
+	Recipients []*user.User `json:"recipients"`
 
 	// The messages in the channel. This is only present in state-cached channels,
 	// and State.MaxMessageCount must be non-zero.
@@ -282,7 +279,7 @@ type VerificationLevel int
 
 // Constants for VerificationLevel levels from 0 to 3 inclusive
 const (
-	VerificationLevelNone VerificationLevel = iota
+	VerificationLevelNone   VerificationLevel = iota
 	VerificationLevelLow
 	VerificationLevelMedium
 	VerificationLevelHigh
@@ -293,7 +290,7 @@ type ExplicitContentFilterLevel int
 
 // Constants for ExplicitContentFilterLevel levels from 0 to 2 inclusive
 const (
-	ExplicitContentFilterDisabled ExplicitContentFilterLevel = iota
+	ExplicitContentFilterDisabled            ExplicitContentFilterLevel = iota
 	ExplicitContentFilterMembersWithoutRoles
 	ExplicitContentFilterAllMembers
 )
@@ -303,7 +300,7 @@ type MfaLevel int
 
 // Constants for MfaLevel levels from 0 to 1 inclusive
 const (
-	MfaLevelNone MfaLevel = iota
+	MfaLevelNone     MfaLevel = iota
 	MfaLevelElevated
 )
 
@@ -500,12 +497,12 @@ type VoiceState struct {
 
 // A Presence stores the online, offline, or idle and game status of Guild members.
 type Presence struct {
-	User   *User    `json:"user"`
-	Status Status   `json:"status"`
-	Game   *Game    `json:"game"`
-	Nick   string   `json:"nick"`
-	Roles  []string `json:"roles"`
-	Since  *int     `json:"since"`
+	User   *user.User `json:"user"`
+	Status Status     `json:"status"`
+	Game   *Game      `json:"game"`
+	Nick   string     `json:"nick"`
+	Roles  []string   `json:"roles"`
+	Since  *int       `json:"since"`
 }
 
 // GameType is the type of "game" (see GameType* consts) in the Game struct
@@ -513,7 +510,7 @@ type GameType int
 
 // Valid GameType values
 const (
-	GameTypeGame GameType = iota
+	GameTypeGame      GameType = iota
 	GameTypeStreaming
 	GameTypeListening
 	GameTypeWatching
@@ -581,7 +578,7 @@ type Member struct {
 	Mute bool `json:"mute"`
 
 	// The underlying user on which the member is based.
-	User *User `json:"user"`
+	User *user.User `json:"user"`
 
 	// A list of IDs of the roles which are possessed by the member.
 	Roles []string `json:"roles"`
@@ -627,9 +624,9 @@ type FriendSourceFlags struct {
 
 // A Relationship between the logged in user and Relationship.User
 type Relationship struct {
-	User *User  `json:"user"`
-	Type int    `json:"type"` // 1 = friend, 2 = blocked, 3 = incoming friend req, 4 = sent friend req
-	ID   string `json:"id"`
+	User *user.User `json:"user"`
+	Type int        `json:"type"` // 1 = friend, 2 = blocked, 3 = incoming friend req, 4 = sent friend req
+	ID   string     `json:"id"`
 }
 
 // A TooManyRequests struct holds information received from Discord
@@ -660,8 +657,8 @@ type GuildRole struct {
 
 // A GuildBan stores data for a guild ban.
 type GuildBan struct {
-	Reason string `json:"reason"`
-	User   *User  `json:"user"`
+	Reason string     `json:"reason"`
+	User   *user.User `json:"user"`
 }
 
 // A GuildEmbed stores data for a guild embed.
@@ -688,7 +685,7 @@ type GuildAuditLog struct {
 	} `json:"users,omitempty"`
 	AuditLogEntries []struct {
 		TargetID string `json:"target_id"`
-		Changes  []struct {
+		Changes []struct {
 			NewValue interface{} `json:"new_value"`
 			OldValue interface{} `json:"old_value"`
 			Key      string      `json:"key"`
@@ -696,7 +693,7 @@ type GuildAuditLog struct {
 		UserID     string `json:"user_id"`
 		ID         string `json:"id"`
 		ActionType int    `json:"action_type"`
-		Options    struct {
+		Options struct {
 			DeleteMembersDay string `json:"delete_member_days"`
 			MembersRemoved   string `json:"members_removed"`
 			ChannelID        string `json:"channel_id"`
@@ -780,13 +777,13 @@ type APIErrorMessage struct {
 
 // Webhook stores the data for a webhook.
 type Webhook struct {
-	ID        string `json:"id"`
-	GuildID   string `json:"guild_id"`
-	ChannelID string `json:"channel_id"`
-	User      *User  `json:"user"`
-	Name      string `json:"name"`
-	Avatar    string `json:"avatar"`
-	Token     string `json:"token"`
+	ID        string     `json:"id"`
+	GuildID   string     `json:"guild_id"`
+	ChannelID string     `json:"channel_id"`
+	User      *user.User `json:"user"`
+	Name      string     `json:"name"`
+	Avatar    string     `json:"avatar"`
+	Token     string     `json:"token"`
 }
 
 // WebhookParams is a struct for webhook params, used in the WebhookExecute command.
@@ -815,7 +812,7 @@ type GatewayBotResponse struct {
 
 // Constants for the different bit offsets of text channel permissions
 const (
-	PermissionReadMessages = 1 << (iota + 10)
+	PermissionReadMessages       = 1 << (iota + 10)
 	PermissionSendMessages
 	PermissionSendTTSMessages
 	PermissionManageMessages
@@ -828,7 +825,7 @@ const (
 
 // Constants for the different bit offsets of voice permissions
 const (
-	PermissionVoiceConnect = 1 << (iota + 20)
+	PermissionVoiceConnect       = 1 << (iota + 20)
 	PermissionVoiceSpeak
 	PermissionVoiceMuteMembers
 	PermissionVoiceDeafenMembers
@@ -838,7 +835,7 @@ const (
 
 // Constants for general management.
 const (
-	PermissionChangeNickname = 1 << (iota + 26)
+	PermissionChangeNickname  = 1 << (iota + 26)
 	PermissionManageNicknames
 	PermissionManageRoles
 	PermissionManageWebhooks

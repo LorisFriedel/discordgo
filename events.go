@@ -2,6 +2,8 @@ package discordgo
 
 import (
 	"encoding/json"
+	"github.com/LorisFriedel/discordgo/voice"
+	"github.com/LorisFriedel/discordgo/user"
 )
 
 // This file contains all the possible structs that can be
@@ -26,10 +28,10 @@ type RateLimit struct {
 
 // Event provides a basic initial struct for all websocket events.
 type Event struct {
-	Operation int             `json:"op"`
-	Sequence  int64           `json:"s"`
-	Type      string          `json:"t"`
-	RawData   json.RawMessage `json:"d"`
+	Opcode   voice.Opcode    `json:"op"`
+	Sequence int64           `json:"s"`
+	Type     string          `json:"t"`
+	RawData  json.RawMessage `json:"d"`
 	// Struct contains one of the other types in this file.
 	Struct interface{} `json:"-"`
 }
@@ -38,7 +40,7 @@ type Event struct {
 type Ready struct {
 	Version         int          `json:"v"`
 	SessionID       string       `json:"session_id"`
-	User            *User        `json:"user"`
+	User            *user.User   `json:"user"`
 	ReadState       []*ReadState `json:"read_state"`
 	PrivateChannels []*Channel   `json:"private_channels"`
 	Guilds          []*Guild     `json:"guilds"`
@@ -89,14 +91,14 @@ type GuildDelete struct {
 
 // GuildBanAdd is the data for a GuildBanAdd event.
 type GuildBanAdd struct {
-	User    *User  `json:"user"`
-	GuildID string `json:"guild_id"`
+	User    *user.User `json:"user"`
+	GuildID string     `json:"guild_id"`
 }
 
 // GuildBanRemove is the data for a GuildBanRemove event.
 type GuildBanRemove struct {
-	User    *User  `json:"user"`
-	GuildID string `json:"guild_id"`
+	User    *user.User `json:"user"`
+	GuildID string     `json:"guild_id"`
 }
 
 // GuildMemberAdd is the data for a GuildMemberAdd event.
@@ -217,7 +219,7 @@ type TypingStart struct {
 
 // UserUpdate is the data for a UserUpdate event.
 type UserUpdate struct {
-	*User
+	*user.User
 }
 
 // UserSettingsUpdate is the data for a UserSettingsUpdate event.

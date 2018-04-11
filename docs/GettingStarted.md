@@ -17,7 +17,7 @@ master branch or the bleeding edge development branch.**
 * The **master** branch represents the latest released version of DiscordGo. This
 branch will always have a stable and tested version of the library. Each 
 release is tagged and you can easily download a specific release and view the 
-release notes on the github [releases](https://github.com/bwmarrin/discordgo/releases) 
+release notes on the github [releases](https://github.com/LorisFriedel/discordgo/releases)
 page.
 
 * The **develop** branch is where all development happens and almost always has

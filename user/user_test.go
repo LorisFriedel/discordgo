@@ -1,4 +1,4 @@
-package discordgo
+package user
 
 import "testing"
 

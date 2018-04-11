@@ -24,7 +24,13 @@ import (
 const VERSION = "0.18.0-alpha"
 
 // ErrMFA will be risen by New when the user has 2FA.
-var ErrMFA = errors.New("account has 2FA enabled")
+var ErrMFA = errors.New("account has two factor authentication (2FA) enabled")
+
+
+// TODO
+//func New(token string) (s *Session, err error) {
+//
+//}
 
 // New creates a new Discord session and will automate some startup
 // tasks if given enough information to do so.  Currently you can pass zero
@@ -45,6 +51,7 @@ var ErrMFA = errors.New("account has 2FA enabled")
 // and then use that authentication token for all future connections.
 // Also, doing any form of automation with a user (non Bot) account may result
 // in that account being permanently banned from Discord.
+// TODO rewrite that
 func New(args ...interface{}) (s *Session, err error) {
 
 	// Create an empty Session interface.
@@ -70,6 +77,7 @@ func New(args ...interface{}) (s *Session, err error) {
 	// Variables used below when parsing func arguments
 	var auth, pass string
 
+	// TODO rewrite that
 	// Parse passed arguments
 	for _, arg := range args {
 
@@ -125,6 +133,7 @@ func New(args ...interface{}) (s *Session, err error) {
 	// Otherwise get auth token from Discord, if a token was specified
 	// Discord will verify it for free, or log the user in if it is
 	// invalid.
+	// TODO rewrite that
 	if pass == "" {
 		s.Token = auth
 	} else {
@@ -133,7 +142,7 @@ func New(args ...interface{}) (s *Session, err error) {
 			if s.MFA {
 				err = ErrMFA
 			} else {
-				err = fmt.Errorf("Unable to fetch discord authentication token. %v", err)
+				err = fmt.Errorf("unable to fetch discord authentication token, error: %v", err)
 			}
 			return
 		}

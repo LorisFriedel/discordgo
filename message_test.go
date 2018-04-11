@@ -2,12 +2,13 @@ package discordgo
 
 import (
 	"testing"
+	"github.com/LorisFriedel/discordgo/user"
 )
 
 func TestContentWithMoreMentionsReplaced(t *testing.T) {
 	s := &Session{StateEnabled: true, State: NewState()}
 
-	user := &User{
+	user := &user.User{
 		ID:       "user",
 		Username: "User Name",
 	}
@@ -33,7 +34,7 @@ func TestContentWithMoreMentionsReplaced(t *testing.T) {
 		Content:      "<@&role> <@!user> <@user> <#channel>",
 		ChannelID:    "channel",
 		MentionRoles: []string{"role"},
-		Mentions:     []*User{user},
+		Mentions:     []*user.User{user},
 	}
 	if result, _ := m.ContentWithMoreMentionsReplaced(s); result != "@Role Name @User Nick @User Name #Channel Name" {
 		t.Error(result)
