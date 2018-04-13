@@ -20,6 +20,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/LorisFriedel/discordgo/user"
+	"github.com/LorisFriedel/discordgo/voice"
 )
 
 // A Session represents a connection to the Discord API.
@@ -70,7 +71,7 @@ type Session struct {
 	UDPReady bool // NOTE: Deprecated
 
 	// Stores a mapping of guild id's to VoiceConnections
-	VoiceConnections map[string]*VoiceConnection
+	VoiceConnections map[string]voice.Connection
 
 	// Managed state object, updated internally with events when
 	// StateEnabled is true.

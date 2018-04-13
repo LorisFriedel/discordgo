@@ -13,8 +13,9 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
-	log "github.com/sirupsen/logrus"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -29,11 +30,14 @@ func (sch *SourceCodeHook) Levels() []log.Level {
 }
 
 func (sch *SourceCodeHook) Fire(e *log.Entry) error {
+	timestamp := time.Now().Unix()
 	file, function, line := findCaller(5)
-	e.Message = fmt.Sprintf("[%d] %s:%d:%s() ", time.Now().Unix(), file, line, function) + e.Message
+	e.Message = fmt.Sprintf("[%d] %s:%d:%s() ", timestamp, file, line, function) + e.Message
 	return nil
 }
 
+
+// TODO rewrite
 // NOT PERF but it works
 func findCaller(skip int) (string, string, int) {
 	var (

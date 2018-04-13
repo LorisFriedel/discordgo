@@ -21,7 +21,7 @@ type MessageType int
 
 // Block contains the valid known MessageType values
 const (
-	MessageTypeDefault MessageType = iota
+	MessageTypeDefault              MessageType = iota
 	MessageTypeRecipientAdd
 	MessageTypeRecipientRemove
 	MessageTypeCall
@@ -41,10 +41,10 @@ type Message struct {
 	MentionRoles    []string             `json:"mention_roles"`
 	Tts             bool                 `json:"tts"`
 	MentionEveryone bool                 `json:"mention_everyone"`
-	Author          *user.User                `json:"author"`
+	Author          *user.User           `json:"author"`
 	Attachments     []*MessageAttachment `json:"attachments"`
 	Embeds          []*MessageEmbed      `json:"embeds"`
-	Mentions        []*user.User              `json:"mentions"`
+	Mentions        []*user.User         `json:"mentions"`
 	Reactions       []*MessageReactions  `json:"reactions"`
 	Type            MessageType          `json:"type"`
 }

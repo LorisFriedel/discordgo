@@ -23,14 +23,27 @@ import (
 // VERSION of DiscordGo, follows Semantic Versioning. (http://semver.org/)
 const VERSION = "0.18.0-alpha"
 
-// ErrMFA will be risen by New when the user has 2FA.
 var ErrMFA = errors.New("account has two factor authentication (2FA) enabled")
+var ErrNoToken = errors.New("empty authentication token provided")
 
+func NewBot(token string) (*Session, error) {
+	session := newEmptySession()
 
-// TODO
-//func New(token string) (s *Session, err error) {
-//
-//}
+	if token == "" {
+		return nil, ErrNoToken
+	}
+	session.Token = token
+
+	err := session.Login("Bot " + token, "")
+	if err != nil {
+		if session.MFA {
+			err = ErrMFA
+		}
+		return nil, err
+	}
+
+	return session, nil
+}
 
 // New creates a new Discord session and will automate some startup
 // tasks if given enough information to do so.  Currently you can pass zero
@@ -55,19 +68,7 @@ var ErrMFA = errors.New("account has two factor authentication (2FA) enabled")
 func New(args ...interface{}) (s *Session, err error) {
 
 	// Create an empty Session interface.
-	s = &Session{
-		State:                  NewState(),
-		Ratelimiter:            NewRatelimiter(),
-		StateEnabled:           true,
-		Compress:               true,
-		ShouldReconnectOnError: true,
-		ShardID:                0,
-		ShardCount:             1,
-		MaxRestRetries:         3,
-		Client:                 &http.Client{Timeout: 20 * time.Second},
-		sequence:               new(int64),
-		LastHeartbeatAck:       time.Now().UTC(),
-	}
+	s = newEmptySession()
 
 	// If no arguments are passed return the empty Session interface.
 	if args == nil {
@@ -152,4 +153,20 @@ func New(args ...interface{}) (s *Session, err error) {
 	// It is recommended that you now call Open() so that events will trigger.
 
 	return
+}
+
+func newEmptySession() *Session {
+	return &Session{
+		State:                  NewState(),
+		Ratelimiter:            NewRatelimiter(),
+		StateEnabled:           true,
+		Compress:               true,
+		ShouldReconnectOnError: true,
+		ShardID:                0,
+		ShardCount:             1,
+		MaxRestRetries:         3,
+		Client:                 &http.Client{Timeout: 20 * time.Second},
+		sequence:               new(int64),
+		LastHeartbeatAck:       time.Now().UTC(),
+	}
 }
